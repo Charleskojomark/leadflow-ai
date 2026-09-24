@@ -15,7 +15,8 @@ import {
   User,
 } from './types';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+// Use relative path so serverless route handlers work on any deployment URL
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
 // Initial fallback seed data for cloud / preview environments
 const INITIAL_LISTS: LeadList[] = [
