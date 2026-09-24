@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
-import { store } from '@/lib/serverless-store';
+import { getDashboardMetrics } from '@/lib/db';
 
 export async function GET() {
-  const metrics = store.getMetrics();
-  return NextResponse.json(metrics);
+  try {
+    const metrics = await getDashboardMetrics();
+    return NextResponse.json(metrics);
+  } catch (err: any) {
+    return NextResponse.json({ detail: err.message }, { status: 500 });
+  }
 }

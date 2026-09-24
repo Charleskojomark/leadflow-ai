@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { store } from '@/lib/serverless-store';
+import { getActivityLogs } from '@/lib/db';
 
 export async function GET(req: NextRequest) {
-  const limit = Number(req.nextUrl.searchParams.get('limit')) || 20;
-  const logs = store.getLogs(limit);
-  return NextResponse.json(logs);
+  try {
+    const limit = Number(req.nextUrl.searchParams.get('limit') || '10');
+    const logs = await getActivityLogs(limit);
+    return NextResponse.json(logs);
+  } catch (err: any) {
+    return NextResponse.json({ detail: err.message }, { status: 500 });
+  }
 }

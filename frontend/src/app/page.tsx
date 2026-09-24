@@ -39,43 +39,20 @@ export default function DashboardPage() {
       setActivityLogs(logsData);
     } catch (err) {
       console.error('Failed to load dashboard metrics:', err);
-      // Fallback demo metrics if backend is warming up
       setMetrics({
-        total_leads: 142,
-        valid_leads: 118,
-        risky_leads: 16,
-        invalid_leads: 8,
-        total_campaigns: 4,
-        active_campaigns: 2,
-        total_emails_sent: 320,
-        overall_open_rate: 48.5,
-        overall_reply_rate: 14.2,
-        overall_bounce_rate: 2.1,
-        active_smtp_count: 2,
+        total_leads: 0,
+        valid_leads: 0,
+        risky_leads: 0,
+        invalid_leads: 0,
+        total_campaigns: 0,
+        active_campaigns: 0,
+        total_emails_sent: 0,
+        overall_open_rate: 0,
+        overall_reply_rate: 0,
+        overall_bounce_rate: 0,
+        active_smtp_count: 0,
       });
-      setActivityLogs([
-        {
-          id: 1,
-          action: 'LEAD_DISCOVERED',
-          entity_type: 'lead',
-          details: 'Extracted 12 leads from https://stripe.com via AI Scraper',
-          created_at: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-        },
-        {
-          id: 2,
-          action: 'BATCH_VALIDATED',
-          entity_type: 'verification',
-          details: 'Validated 25 contacts: 22 Valid (MX OK), 3 Risky',
-          created_at: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-        },
-        {
-          id: 3,
-          action: 'CAMPAIGN_LAUNCHED',
-          entity_type: 'campaign',
-          details: 'Q4 SaaS Founders Sequence launched to 50 recipients',
-          created_at: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-        },
-      ]);
+      setActivityLogs([]);
     } finally {
       setLoading(false);
       setRefreshing(false);

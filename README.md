@@ -1,85 +1,71 @@
-# ⚡ LeadFlow AI — AI-Powered Lead Discovery & Cold Outreach SaaS Platform
+# ⚡ LeadFlow AI — AI Lead Discovery & Cold Outreach SaaS Platform
 
-**LeadFlow AI** is a production-oriented, full-stack B2B SaaS platform designed to streamline decision-maker lead generation, deep deliverability validation, and multi-step automated cold outreach.
+**LeadFlow AI** is a 100% serverless, full-stack B2B SaaS platform for decision-maker lead discovery, deep deliverability validation, and automated multi-step cold email outreach.
+
+---
+
+## 🏗️ Architecture: 100% Serverless & Production-Ready
+
+- **Framework**: Next.js 16 (App Router), React 19, Tailwind CSS v4, Lucide Icons
+- **Database**: [Neon](https://neon.tech) Serverless PostgreSQL (`@neondatabase/serverless`)
+- **Extraction Engine**: Cheerio live DOM scraping, metadata parsing, and social profile resolution
+- **Deliverability Engine**: Native Node.js `dns.promises` MX record resolution, RFC 5322 syntax validation, and burner domain filtering
+- **Mail Infrastructure**: Nodemailer authenticated SMTP transport, TLS handshake diagnostics, and variable interpolation
+- **Security & Vault**: AES-256-GCM symmetric encryption for mailbox credentials
+- **Deployment**: Vercel Edge / Node.js Serverless Functions
 
 ---
 
 ## 🌟 Key Features
 
-### 🔍 1. AI-Powered Lead Discovery & Web Extraction
-- **Target URL Scraper**: Autonomous company scraper that extracts verified emails, executive names, phone numbers, and social links (LinkedIn, Twitter).
-- **Google Search Query Simulator**: High-intent Boolean search discovery across professional networks and company directories.
-- **Tech Stack Profiling**: Detects underlying web technologies (e.g. Next.js, React, Tailwind, Stripe, AWS, Postgres).
+### 🔍 1. Live Lead Discovery & Web Extraction
+- **Autonomous Target URL Scraper**: Fetches live web targets, parses HTML with Cheerio, extracts emails from `mailto:` links and text regex, resolves executive titles, and identifies company metadata.
+- **Search Discovery**: Target domain and organization prospect extraction.
+- **Zero Mock Data**: Discovers live contacts from real internet destinations.
 
 ### 🛡️ 2. Deep Email Deliverability & Verification Engine
-- **Multi-Stage Diagnostic**: RFC 5322 syntax validation, DNS MX host resolution, disposable/temporary burner email filtering, and simulated SMTP handshakes.
+- **Multi-Stage Diagnostic**: RFC 5322 syntax validation, live DNS MX mail exchange host resolution, 100+ disposable/temporary burner domain filters, and role-based account detection.
 - **Deliverability Scoring**: 0–100 confidence score with color-coded safety badges (`Valid`, `Risky`, `Invalid`).
-- **Batch Processing**: 1-click list verification before launching campaigns to protect domain reputation.
+- **Batch Processing**: 1-click list verification before dispatching campaigns.
 
 ### ✉️ 3. Cold Outreach & Multi-Step Drip Campaigns
-- **Visual Sequence Builder**: Multi-step automated follow-up sequences with customizable delay days.
-- **Dynamic Variable Interpolation**: Inject `{{firstName}}`, `{{company}}`, and `{{jobTitle}}` seamlessly.
-- **Safety Throttling**: Daily send quotas, open tracking pixels, click tracking, and dry-run preview mode.
+- **Multi-Step Follow-Up Sequences**: Visual sequence builder with custom delay days.
+- **Dynamic Variable Interpolation**: Inject `{{first_name}}`, `{{company_name}}`, and `{{email}}` into subjects and templates.
+- **Live Dispatch Engine**: Sends real outreach emails via authenticated SMTP mailboxes with automated `List-Unsubscribe` headers.
 
 ### 🔐 4. Encrypted SMTP Mailbox Infrastructure
-- **Fernet AES-256 Vault**: Sensitive SMTP app passwords and tokens are encrypted before database persistence.
-- **Preset Integrations**: One-click configuration for Google Workspace, Microsoft 365, and Custom SMTP.
+- **AES-256-GCM Vault**: Sensitive SMTP passwords and tokens are encrypted before database persistence.
+- **Presets**: One-click configuration for Google Workspace, Microsoft 365, and Custom SMTP relays.
 - **Real-Time Handshake Testing**: Interactive connection diagnostic verifies TLS/SSL handshakes directly with the mail server.
 
 ### 🚫 5. Compliance & Suppression (CAN-SPAM & GDPR)
-- **Automatic Hard-Bounce Shield**: Catches SMTP 550 errors and auto-appends to the suppression list.
-- **Domain Masking**: Suppress entire competitor or client domains.
-- **1-Click Unsubscribe**: Automatic `List-Unsubscribe` headers and opt-out links.
+- **Automatic Suppression Shield**: Blocks suppressed emails and competitor domains during CSV imports and campaign dispatches.
+- **1-Click Unsubscribe**: Automatic compliance footers and opt-out management.
 
 ---
 
-## 🏗️ Technical Architecture
+## 🚀 Getting Started
 
-- **Frontend**: Next.js 16 (App Router), React 19, Tailwind CSS v4, Lucide Icons
-- **Backend API**: FastAPI (Python 3.12+), Pydantic v2, Asynchronous IO
-- **Database**: SQLAlchemy 2.0 Async, Aiosqlite (WAL mode)
-- **Security & Encryption**: Fernet AES-256 symmetric encryption, PyJWT
-- **Email & Extraction**: `aiosmtplib`, `BeautifulSoup4`, `dnspython`
-
----
-
-## 🚀 Getting Started Locally
-
-### Prerequisites
-- Node.js 18+ (tested on Node 26)
-- Python 3.10+
-- Git
-
-### 1. Start the FastAPI Backend
+### 1. Clone & Install
 ```bash
-cd backend
-python -m venv .venv
-# Windows:
-.venv\Scripts\activate
-# macOS/Linux:
-source .venv/bin/activate
-
-pip install -r requirements.txt
-python run.py
-```
-*API will be live at `http://127.0.0.1:8000` with interactive Swagger docs at `/docs`.*
-
-### 2. Start the Next.js Frontend
-```bash
-cd frontend
+git clone https://github.com/Charleskojomark/leadflow-ai.git
+cd leadflow-ai/frontend
 npm install
+```
+
+### 2. Configure Neon PostgreSQL
+Create a `.env.local` file inside `frontend/`:
+```env
+DATABASE_URL="postgres://username:password@ep-sample-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require"
+SECRET_KEY="your-32-byte-secret-encryption-key"
+```
+
+### 3. Initialize Database Schema
+Run the local dev server:
+```bash
 npm run dev
 ```
-*Frontend will be live at `http://localhost:3000`.*
-
----
-
-## 🧪 Running Automated Tests
-```bash
-cd backend
-pytest
-```
-*Runs all 14 comprehensive unit and workflow integration tests.*
+Open [http://localhost:3000/settings](http://localhost:3000/settings) and click **"Initialize Schema"** to provision all 8 relational tables and constraints in Neon PostgreSQL.
 
 ---
 

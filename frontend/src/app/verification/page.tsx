@@ -55,49 +55,30 @@ export default function VerificationPage() {
     setIsVerifying(true);
     setResult(null);
 
-    // Call validation test
     try {
-      // Create a temporary check by creating a lead or calling validation
-      const syntaxValid = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/.test(testEmail);
-      const isDisposable = /tempmail|mailinator|guerrillamail|10minutemail/i.test(testEmail);
-      const isFree = /gmail\.com|yahoo\.com|hotmail\.com|outlook\.com/i.test(testEmail);
-
-      let score = 95;
-      let status: 'valid' | 'risky' | 'invalid' = 'valid';
-
-      if (!syntaxValid) {
-        score = 0;
-        status = 'invalid';
-      } else if (isDisposable) {
-        score = 10;
-        status = 'invalid';
-      } else if (isFree) {
-        score = 75;
-        status = 'risky';
+      const response = await fetch('/api/v1/verification/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: testEmail }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail || 'Verification request failed');
       }
-
-      // Simulate network / DNS MX lookup
-      await new Promise((resolve) => setTimeout(resolve, 800));
-
+      setResult(data);
+    } catch (err: any) {
+      console.error('Validation error:', err);
       setResult({
         email: testEmail,
-        status,
-        score,
-        syntax_valid: syntaxValid,
-        mx_records_found: syntaxValid && !isDisposable,
-        is_disposable: isDisposable,
-        is_free_provider: isFree,
-        smtp_pingable: syntaxValid && !isDisposable,
-        details: status === 'valid'
-          ? 'Corporate domain with active MX mail exchangers and verified SMTP handshake.'
-          : status === 'risky'
-          ? 'Free consumer webmail provider. Deliverability may vary.'
-          : isDisposable
-          ? 'Disposable temporary mailbox detected. Do not send.'
-          : 'Invalid syntax RFC 5322 compliance violation.',
+        status: 'invalid',
+        score: 0,
+        syntax_valid: false,
+        mx_records_found: false,
+        is_disposable: false,
+        is_free_provider: false,
+        smtp_pingable: false,
+        details: err.message || 'Validation request failed',
       });
-    } catch (err) {
-      console.error('Validation error:', err);
     } finally {
       setIsVerifying(false);
     }

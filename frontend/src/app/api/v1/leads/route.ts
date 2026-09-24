@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { store } from '@/lib/serverless-store';
+import { getLeads, createLead } from '@/lib/db';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
@@ -10,22 +10,28 @@ export async function GET(req: NextRequest) {
   const skip = searchParams.get('skip') ? Number(searchParams.get('skip')) : 0;
   const limit = searchParams.get('limit') ? Number(searchParams.get('limit')) : 100;
 
-  const result = store.getLeads({
-    list_id,
-    validation_status,
-    status,
-    search,
-    skip,
-    limit,
-  });
-
-  return NextResponse.json(result);
+  try {
+    const result = await getLeads({
+      list_id,
+      validation_status,
+      status,
+      search,
+      skip,
+      limit,
+    });
+    return NextResponse.json(result);
+  } catch (err: any) {
+    return NextResponse.json({ detail: err.message }, { status: 500 });
+  }
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const lead = store.createLead(body);
+    if (!body.email) {
+      return NextResponse.json({ detail: 'Email is required' }, { status: 400 });
+    }
+    const lead = await createLead(body);
     return NextResponse.json(lead, { status: 201 });
   } catch (err: any) {
     return NextResponse.json({ detail: err.message || 'Failed to create lead' }, { status: 400 });

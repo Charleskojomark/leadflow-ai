@@ -94,11 +94,11 @@ export function Sidebar({ apiStatus = 'healthy' }: SidebarProps) {
         })}
       </div>
 
-      {/* Backend Status & Documentation Card */}
+      {/* Engine & Database Status Card */}
       <div className="p-4 border-t border-slate-800/80 bg-slate-950/80">
         <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2.5">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-400">FastAPI Backend</span>
+            <span className="text-xs font-medium text-slate-400">Serverless & Neon</span>
             <span
               className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border ${
                 apiStatus === 'healthy'
@@ -111,19 +111,17 @@ export function Sidebar({ apiStatus = 'healthy' }: SidebarProps) {
                   apiStatus === 'healthy' ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'
                 }`}
               />
-              {apiStatus === 'healthy' ? 'Live' : 'Offline'}
+              {apiStatus === 'healthy' ? 'Connected' : 'Offline'}
             </span>
           </div>
 
-          <a
-            href="http://localhost:8000/docs"
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            href="/settings"
             className="flex items-center justify-between text-xs text-slate-400 hover:text-blue-400 transition-colors pt-1 border-t border-slate-800/60"
           >
-            <span>Interactive OpenAPI Docs</span>
+            <span>System Diagnostics</span>
             <ExternalLink className="w-3 h-3" />
-          </a>
+          </Link>
         </div>
       </div>
     </aside>
