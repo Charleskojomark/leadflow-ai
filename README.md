@@ -69,5 +69,66 @@ Open [http://localhost:3000/settings](http://localhost:3000/settings) and click 
 
 ---
 
+## 🔬 Technical Assessment & System Vetting
+
+### 1. Email Extraction & Web Discovery
+
+| Area | Implementation & Architecture in LeadFlow AI |
+|---|---|
+| **Accuracy & False Positives** | Powered by `frontend/src/lib/extractor.ts`. Extracts emails from `mailto:` links, metadata, and body text using RFC-compliant pattern matching while stripping standard assets (e.g., `.png`, `.jpg`, font files, placeholder emails). |
+| **JavaScript-Rendered Content** | Built on a lightweight, serverless Cheerio HTML parser (`fetch` + Cheerio) optimized for sub-second execution on Vercel Lambdas. It executes against server-rendered static and SSR HTML. Single-page client-only JS applications (e.g., pure CSR React apps with blank raw HTML) require an auxiliary headless browser worker (e.g., Playwright/Puppeteer) to evaluate DOM scripts. |
+| **Rate Limiting & Anti-Scraping** | Standard serverless HTTP fetch with configurable headers. For high-volume discovery across aggressive anti-bot platforms (e.g., Cloudflare Under Attack mode), requests can be routed through residential proxy pools or dedicated scraping relays. |
+| **LinkedIn & Authenticated Boundaries** | **LeadFlow AI does not attempt credential bypass or authentication breaking on LinkedIn.** Extracting gated LinkedIn profiles requires authorized session tokens (OAuth or cookie-based session injection) or querying public search engine indices (Google/Bing X-Ray search) rather than raw authenticated scraping. |
+
+---
+
+### 2. SMTP Architecture & Deliverability
+
+> [!IMPORTANT]
+> Modern deliverability requires **cryptographic alignment (SPF, DKIM, DMARC)** rather than "masking" or spoofing. Concealing originating infrastructure without proper DNS records will cause immediate rejection by major MX providers (Google, Microsoft 365).
+
+| Question / Area | Architectural Assessment |
+|---|---|
+| **Header Visibility & Masking** | Outbound messages dispatched through `frontend/src/lib/mailer.ts` use your configured relay credentials (e.g., Google Workspace, Amazon SES, Mailgun, custom VPS). Standard MIME headers (`From`, `Reply-To`, `Message-ID`, `X-Mailer: LeadFlow-AI`) are normalized, but RFC 5321 `Received` hops are inserted by the relay MTA and cannot be arbitrarily stripped without triggering spam flags. |
+| **SPF / DKIM / DMARC Handling** | Deliverability is maintained by aligning the `From:` domain with the authenticated SMTP server's TXT records. Because LeadFlow AI connects directly to verified user SMTP accounts, messages pass strict DMARC policies (`p=reject` / `p=quarantine`). |
+| **Sender Reputation & Throttling** | Regulated by the `smtp_accounts` table with per-account `daily_limit` and `emails_sent_today` tracking to keep volume within safe deliverability thresholds (e.g., max 50–100 emails/day per mailbox during warmup). |
+| **Bounce Handling & Pre-Verification** | Handled before sending via `frontend/src/lib/verifier.ts`: verifies email syntax, resolves authoritative DNS MX records in real time, and checks against known disposable/burner domain lists. |
+
+---
+
+### 3. Integration & System Performance
+
+```mermaid
+flowchart LR
+    A["Discovery / Scraper (extractor.ts)"] --> B["RFC 5322 + DNS MX Check (verifier.ts)"]
+    B --> C["Neon PostgreSQL Persistence (db.ts)"]
+    C --> D["Suppression Filtering (suppression)"]
+    D --> E["AES-256 Authenticated SMTP (mailer.ts)"]
+    E --> F["Recipient Mailbox (Google/Outlook)"]
+```
+
+1. **End-to-End Workflow:**
+   * **Extract:** Scrapes contacts via `/api/v1/extraction/scrape-url` or manual CSV batch upload.
+   * **Verify:** Validates domain MX presence and format via `/api/v1/verification/check` or `/api/v1/leads/batch-validate`.
+   * **Filter:** Cross-references the global `suppression_rules` table before any queue addition.
+   * **Dispatch:** Sends drip steps via `/api/v1/campaigns/[id]/send` through the assigned SMTP account.
+2. **Security & Credential Protection:**
+   * SMTP credentials are encrypted at rest using **AES-256-GCM** with unique IVs and authentication tags (`frontend/src/lib/db.ts`). Plaintext passwords are never returned over public API endpoints.
+   * Database storage is hosted on **Neon Serverless PostgreSQL** with SSL/TLS enforcement (`sslmode=require`).
+
+---
+
+### 4. Benchmarks & Target Metrics
+
+| Metric | Target / Benchmark | LeadFlow AI Mechanism |
+|---|---|---|
+| **Syntax & MX Verification Accuracy** | > 98% validity | Real Node.js `dns.promises.resolveMx()` domain verification |
+| **Bounce Rate** | < 2% (Industry standard: < 3%) | Pre-send verification + real-time suppression list |
+| **Database Latency** | < 50ms per query | Neon Connection Pooling via `@neondatabase/serverless` |
+| **Delivery Success Rate** | > 95% into Primary Inbox | Dependent on sender domain SPF/DKIM/DMARC health and adherence to daily warm-up limits |
+
+---
+
 ## 📄 License
 MIT License. Built for modern sales development, growth, and outreach engineering teams.
+
