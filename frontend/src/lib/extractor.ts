@@ -43,7 +43,7 @@ export async function scrapeWebsiteLeads(targetUrl: string, listId?: number): Pr
   // Extract page title & inferred company name
   const pageTitle = $('title').text().trim() || domain;
   const ogSiteName = $('meta[property="og:site_name"]').attr('content') || '';
-  const inferredCompany = ogSiteName || pageTitle.split(/[-–|:]/)[0].trim() || domain;
+  let inferredCompany = ogSiteName || pageTitle.split(/[-–|:]/)[0].trim() || domain;
 
   // Extract socials
   const socials: ScrapedResult['socials'] = {};
@@ -58,8 +58,35 @@ export async function scrapeWebsiteLeads(targetUrl: string, listId?: number): Pr
     }
   });
 
-  // Extract emails from mailto links
+  // Extract raw emails
   const rawEmails = new Set<string>();
+
+  // Extract JSON-LD Schema.org Structured Data
+  $('script[type="application/ld+json"]').each((_, el) => {
+    try {
+      const rawText = $(el).html();
+      if (!rawText) return;
+      const parsed = JSON.parse(rawText);
+      const items = Array.isArray(parsed) ? parsed : (parsed['@graph'] || [parsed]);
+      for (const item of items) {
+        if (item['@type'] === 'Organization' || item['@type'] === 'Corporation') {
+          if (item.name) inferredCompany = item.name;
+          if (item.email && typeof item.email === 'string') rawEmails.add(item.email.toLowerCase().trim());
+          if (Array.isArray(item.sameAs)) {
+            for (const same of item.sameAs) {
+              if (same.includes('linkedin.com') && !socials.linkedin) socials.linkedin = same;
+              if ((same.includes('twitter.com') || same.includes('x.com')) && !socials.twitter) socials.twitter = same;
+              if (same.includes('github.com') && !socials.github) socials.github = same;
+            }
+          }
+        }
+      }
+    } catch {
+      // Ignore JSON parse errors in dynamic embedded script blocks
+    }
+  });
+
+  // Extract emails from mailto links
   $('a[href^="mailto:"]').each((_, el) => {
     const mailto = $(el).attr('href') || '';
     const email = mailto.replace(/^mailto:/i, '').split('?')[0].trim().toLowerCase();

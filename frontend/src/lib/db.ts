@@ -570,17 +570,19 @@ export async function createLead(data: LeadCreateInput): Promise<Lead> {
         ${data.city || null},
         ${data.country || null},
         ${data.source || 'manual'},
-        'unknown',
-        0,
-        'new',
+        ${data.validation_status || 'unknown'},
+        ${data.deliverability_score || 0},
+        ${data.status || 'new'},
         ${data.notes || null},
         ${data.tags || []},
         ${data.list_id || null}
       )
       ON CONFLICT (email, list_id) DO UPDATE SET
-        first_name = EXCLUDED.first_name,
-        last_name = EXCLUDED.last_name,
-        company_name = EXCLUDED.company_name,
+        first_name = COALESCE(EXCLUDED.first_name, leads.first_name),
+        last_name = COALESCE(EXCLUDED.last_name, leads.last_name),
+        company_name = COALESCE(EXCLUDED.company_name, leads.company_name),
+        validation_status = CASE WHEN EXCLUDED.validation_status != 'unknown' THEN EXCLUDED.validation_status ELSE leads.validation_status END,
+        deliverability_score = GREATEST(EXCLUDED.deliverability_score, leads.deliverability_score),
         updated_at = NOW()
       RETURNING *;
     `;
@@ -617,9 +619,9 @@ export async function createLead(data: LeadCreateInput): Promise<Lead> {
     ...data,
     email: data.email.toLowerCase().trim(),
     full_name: fullName,
-    validation_status: 'unknown',
-    deliverability_score: 0,
-    status: 'new',
+    validation_status: data.validation_status || 'unknown',
+    deliverability_score: data.deliverability_score || 0,
+    status: data.status || 'new',
     created_at: new Date().toISOString(),
   };
   memoryStore.leads.unshift(newLead);
