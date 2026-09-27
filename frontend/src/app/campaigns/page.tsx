@@ -166,7 +166,7 @@ export default function CampaignsPage() {
         subtitle="Orchestrate multi-step cold email sequences with personalized variables and rate limits"
       />
 
-      <main className="flex-1 p-8 space-y-6 max-w-7xl w-full mx-auto">
+      <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl w-full mx-auto">
         {/* Top Control Bar */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -272,7 +272,7 @@ export default function CampaignsPage() {
                     </div>
 
                     {/* Metric Cards Grid */}
-                    <div className="grid grid-cols-4 gap-2 pt-2 border-t border-slate-800/80 text-center">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 pt-2 border-t border-slate-800/80 text-center">
                       <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-800">
                         <p className="text-[10px] text-slate-500 font-medium">Sent</p>
                         <p className="text-sm font-bold text-white mt-0.5">{camp.sent_count}</p>

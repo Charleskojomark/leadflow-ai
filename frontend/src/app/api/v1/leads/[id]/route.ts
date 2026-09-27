@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { updateLead, deleteLead, getLeads } from '@/lib/db';
+import { updateLead, deleteLead, getLeadById } from '@/lib/db';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const numId = Number(id);
-  const result = await getLeads({ skip: 0, limit: 1 });
-  // query single lead
-  return NextResponse.json({ id: numId });
+  const lead = await getLeadById(Number(id));
+  if (!lead) {
+    return NextResponse.json({ detail: 'Lead not found' }, { status: 404 });
+  }
+  return NextResponse.json(lead);
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

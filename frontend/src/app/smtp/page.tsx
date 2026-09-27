@@ -130,7 +130,7 @@ export default function SmtpPage() {
         subtitle="Manage sender mailboxes with Fernet encryption, TLS verification and daily send throttle"
       />
 
-      <main className="flex-1 p-8 space-y-6 max-w-7xl w-full mx-auto">
+      <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl w-full mx-auto">
         {/* Header Ribbon */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -229,7 +229,7 @@ export default function SmtpPage() {
                     </div>
 
                     {/* Host details */}
-                    <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                       <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800">
                         <span className="text-[10px] text-slate-500 block">Host & Port</span>
                         <span className="font-mono text-slate-300 mt-0.5 block">
@@ -326,7 +326,7 @@ export default function SmtpPage() {
                 <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                   Provider Preset
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                   <button
                     type="button"
                     onClick={() => handleApplyPreset('gmail')}
@@ -376,7 +376,7 @@ export default function SmtpPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   <div className="col-span-2 space-y-1">
                     <label className="text-[11px] font-semibold text-slate-300">SMTP Host *</label>
                     <input
@@ -401,7 +401,7 @@ export default function SmtpPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-[11px] font-semibold text-slate-300">
                       SMTP Username / Email *
@@ -430,7 +430,7 @@ export default function SmtpPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-[11px] font-semibold text-slate-300">Sender Name</label>
                     <input
@@ -456,7 +456,7 @@ export default function SmtpPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 pt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                   <div className="space-y-1">
                     <label className="text-[11px] font-semibold text-slate-300">
                       Daily Max Send Quota

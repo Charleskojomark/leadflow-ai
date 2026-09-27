@@ -68,7 +68,7 @@ export default function SettingsPage() {
         subtitle="Platform infrastructure, Neon PostgreSQL database, and serverless runtime status"
       />
 
-      <main className="flex-1 p-8 space-y-6 max-w-7xl w-full mx-auto">
+      <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl w-full mx-auto">
         {/* Neon PostgreSQL Connection Panel */}
         <div className="glass-panel p-6 rounded-2xl space-y-5 border border-slate-800">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

@@ -121,7 +121,7 @@ export default function DiscoveryPage() {
         subtitle="Extract targeted decision-maker contacts directly from URLs & search queries"
       />
 
-      <main className="flex-1 p-8 space-y-8 max-w-7xl w-full mx-auto">
+      <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8 max-w-7xl w-full mx-auto">
         {/* Modes Toggle Header */}
         <div className="flex items-center gap-2 p-1.5 rounded-xl bg-slate-900/80 border border-slate-800 w-fit">
           <button
@@ -360,7 +360,7 @@ export default function DiscoveryPage() {
           ) : (
             <div className="glass-panel rounded-2xl overflow-hidden border border-slate-800">
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+                <table className="w-full min-w-[640px] text-left text-xs">
                   <thead className="bg-slate-900/80 text-slate-400 border-b border-slate-800">
                     <tr>
                       <th className="py-3 px-4 font-semibold">Contact & Title</th>

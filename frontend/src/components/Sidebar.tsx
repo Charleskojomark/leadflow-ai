@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -15,14 +15,22 @@ import {
   Sparkles,
   Zap,
   ExternalLink,
+  X,
 } from 'lucide-react';
 
 interface SidebarProps {
   apiStatus?: 'healthy' | 'offline' | 'checking';
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
 }
 
-export function Sidebar({ apiStatus = 'healthy' }: SidebarProps) {
+export function Sidebar({ apiStatus = 'healthy', mobileOpen = false, onMobileClose }: SidebarProps) {
   const pathname = usePathname();
+
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    onMobileClose?.();
+  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const navItems = [
     { label: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -35,10 +43,10 @@ export function Sidebar({ apiStatus = 'healthy' }: SidebarProps) {
     { label: 'Settings & API', href: '/settings', icon: Settings },
   ];
 
-  return (
-    <aside className="w-64 bg-slate-950 border-r border-slate-800/80 flex flex-col h-screen fixed left-0 top-0 z-40 select-none">
+  const sidebarContent = (
+    <aside className="w-64 bg-slate-950 border-r border-slate-800/80 flex flex-col h-full select-none">
       {/* Brand Header */}
-      <div className="h-16 flex items-center px-6 border-b border-slate-800/60 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950">
+      <div className="h-16 flex items-center justify-between px-5 border-b border-slate-800/60 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 shrink-0">
         <Link href="/" className="flex items-center gap-3 group">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-transform duration-300">
             <Zap className="w-5 h-5 text-white" />
@@ -55,6 +63,15 @@ export function Sidebar({ apiStatus = 'healthy' }: SidebarProps) {
             <p className="text-[10px] text-slate-400 font-medium -mt-0.5">Outreach Engine</p>
           </div>
         </Link>
+
+        {/* Mobile close button */}
+        <button
+          onClick={onMobileClose}
+          className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+          aria-label="Close menu"
+        >
+          <X className="w-5 h-5" />
+        </button>
       </div>
 
       {/* Navigation */}
@@ -95,7 +112,7 @@ export function Sidebar({ apiStatus = 'healthy' }: SidebarProps) {
       </div>
 
       {/* Engine & Database Status Card */}
-      <div className="p-4 border-t border-slate-800/80 bg-slate-950/80">
+      <div className="p-4 border-t border-slate-800/80 bg-slate-950/80 shrink-0">
         <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2.5">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-400">Serverless & Neon</span>
@@ -125,5 +142,33 @@ export function Sidebar({ apiStatus = 'healthy' }: SidebarProps) {
         </div>
       </div>
     </aside>
+  );
+
+  return (
+    <>
+      {/* Desktop sidebar — always visible on lg+ */}
+      <div className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:left-0 lg:z-40">
+        {sidebarContent}
+      </div>
+
+      {/* Mobile drawer overlay */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-50 lg:hidden"
+          role="dialog"
+          aria-modal="true"
+        >
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={onMobileClose}
+          />
+          {/* Slide-in panel */}
+          <div className="fixed inset-y-0 left-0 z-50 flex w-64 flex-col animate-slide-in-left">
+            {sidebarContent}
+          </div>
+        </div>
+      )}
+    </>
   );
 }

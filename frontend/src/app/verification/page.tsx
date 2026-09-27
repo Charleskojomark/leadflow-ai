@@ -124,7 +124,7 @@ export default function VerificationPage() {
         subtitle="Multi-layered RFC syntax, MX DNS lookup, disposable filter and simulated SMTP ping"
       />
 
-      <main className="flex-1 p-8 space-y-8 max-w-7xl w-full mx-auto">
+      <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8 max-w-7xl w-full mx-auto">
         {/* Single Email Live Diagnostic Tester */}
         <div className="glass-panel p-6 rounded-2xl relative overflow-hidden space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

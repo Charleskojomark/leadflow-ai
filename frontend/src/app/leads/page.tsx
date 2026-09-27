@@ -253,7 +253,7 @@ export default function LeadsPage() {
         subtitle="Manage verified prospect lists, run batch deliverability checks & export data"
       />
 
-      <main className="flex-1 p-8 space-y-6 max-w-7xl w-full mx-auto">
+      <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl w-full mx-auto">
         {/* Lists Tabs & Top Actions Bar */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0">
@@ -400,7 +400,7 @@ export default function LeadsPage() {
         {/* Leads Table */}
         <div className="glass-panel rounded-2xl overflow-hidden border border-slate-800">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full min-w-[640px] text-left text-xs">
               <thead className="bg-slate-900/80 text-slate-400 border-b border-slate-800">
                 <tr>
                   <th className="py-3 px-4 w-10">
@@ -582,7 +582,7 @@ export default function LeadsPage() {
               </div>
 
               <form onSubmit={handleCreateLead} className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-[11px] font-semibold text-slate-300">First Name</label>
                     <input
@@ -617,7 +617,7 @@ export default function LeadsPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-[11px] font-semibold text-slate-300">Company</label>
                     <input

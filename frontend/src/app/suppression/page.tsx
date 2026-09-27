@@ -78,7 +78,7 @@ export default function SuppressionPage() {
         subtitle="Protect sender score by blocking suppressed contacts, hard bounces, and competitor domains"
       />
 
-      <main className="flex-1 p-8 space-y-6 max-w-7xl w-full mx-auto">
+      <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl w-full mx-auto">
         {/* Top Control Bar */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -133,7 +133,7 @@ export default function SuppressionPage() {
         {/* Suppression Rules Table */}
         <div className="glass-panel rounded-2xl overflow-hidden border border-slate-800">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full min-w-[640px] text-left text-xs">
               <thead className="bg-slate-900/80 text-slate-400 border-b border-slate-800">
                 <tr>
                   <th className="py-3 px-4 font-semibold">Rule Target</th>
@@ -226,7 +226,7 @@ export default function SuppressionPage() {
               <form onSubmit={handleAddRule} className="space-y-4">
                 <div className="space-y-1">
                   <label className="text-[11px] font-semibold text-slate-300">Rule Type</label>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={() => setRuleType('domain')}

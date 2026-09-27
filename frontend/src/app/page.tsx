@@ -81,17 +81,17 @@ export default function DashboardPage() {
         subtitle="Real-time Lead Intelligence & Cold Outreach Automation"
       />
 
-      <main className="flex-1 p-8 space-y-8 max-w-7xl w-full mx-auto">
+      <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8 max-w-7xl w-full mx-auto">
         {/* Welcome Banner */}
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-950/60 via-slate-900 to-indigo-950/40 border border-blue-500/20 p-6 shadow-xl shadow-blue-950/20">
           <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 relative z-10">
             <div className="space-y-2">
               <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-500/15 border border-blue-400/30 text-xs font-semibold text-blue-300">
                 <Sparkles className="w-3.5 h-3.5 text-blue-400" />
                 <span>Next-Gen Cold Outreach Platform</span>
               </div>
-              <h2 className="text-2xl font-extrabold text-white tracking-tight">
+              <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
                 Accelerate Discovery. Deliver to Inboxes.
               </h2>
               <p className="text-sm text-slate-300 max-w-2xl leading-relaxed">
@@ -100,7 +100,7 @@ export default function DashboardPage() {
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={handleRefresh}
                 disabled={refreshing}

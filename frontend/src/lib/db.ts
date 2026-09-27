@@ -627,6 +627,52 @@ export async function createLead(data: LeadCreateInput): Promise<Lead> {
   return newLead;
 }
 
+export async function getLeadById(id: number): Promise<Lead | null> {
+  if (isDbConfigured()) {
+    try {
+      const sql = getSql();
+      const [row] = await sql`
+        SELECT 
+          l.*,
+          lists.name AS list_name
+        FROM leads l
+        LEFT JOIN lead_lists lists ON lists.id = l.list_id
+        WHERE l.id = ${id}
+        LIMIT 1;
+      `;
+      if (!row) return null;
+      return {
+        id: row.id,
+        email: row.email,
+        first_name: row.first_name || '',
+        last_name: row.last_name || '',
+        full_name: row.full_name || '',
+        company_name: row.company_name || '',
+        job_title: row.job_title || '',
+        website: row.website || '',
+        phone: row.phone || '',
+        linkedin_url: row.linkedin_url || '',
+        twitter_url: row.twitter_url || '',
+        city: row.city || '',
+        country: row.country || '',
+        source: row.source || 'manual',
+        validation_status: row.validation_status || 'unknown',
+        deliverability_score: row.deliverability_score || 0,
+        status: row.status || 'new',
+        notes: row.notes || '',
+        tags: row.tags || [],
+        list_id: row.list_id,
+        list_name: row.list_name || '',
+        created_at: new Date(row.created_at).toISOString(),
+      };
+    } catch (err) {
+      console.error('Failed to get lead by id:', err);
+    }
+  }
+
+  return memoryStore.leads.find((l) => l.id === id) || null;
+}
+
 export async function updateLead(id: number, updates: Partial<Lead>): Promise<Lead | null> {
   if (isDbConfigured()) {
     const sql = getSql();
