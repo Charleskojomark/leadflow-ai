@@ -324,8 +324,8 @@ export default function CampaignsPage() {
 
         {/* Modal: Sequence & Campaign Builder */}
         {showModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 overflow-y-auto">
-            <div className="glass-panel w-full max-w-2xl p-6 rounded-2xl space-y-5 border border-slate-700 relative my-8 animate-in fade-in zoom-in-95 duration-200">
+          <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/75 backdrop-blur-sm p-4 overflow-y-auto">
+            <div className="glass-panel w-full max-w-2xl p-6 rounded-2xl space-y-5 border border-slate-700 relative my-auto animate-in fade-in zoom-in-95 duration-200">
               <div className="flex items-center justify-between pb-3 border-b border-slate-800">
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
                   <MailCheck className="w-4 h-4 text-blue-400" />

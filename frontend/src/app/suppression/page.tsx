@@ -208,8 +208,8 @@ export default function SuppressionPage() {
 
         {/* Modal: Add Suppression Rule */}
         {showModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-            <div className="glass-panel w-full max-w-md p-6 rounded-2xl space-y-4 border border-slate-700 relative animate-in fade-in zoom-in-95 duration-200">
+          <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/75 backdrop-blur-sm p-4 overflow-y-auto">
+            <div className="glass-panel w-full max-w-md p-6 rounded-2xl space-y-4 border border-slate-700 relative animate-in fade-in zoom-in-95 duration-200 my-auto">
               <div className="flex items-center justify-between pb-3 border-b border-slate-800">
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
                   <ShieldBan className="w-4 h-4 text-rose-400" />

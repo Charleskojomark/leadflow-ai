@@ -54,6 +54,16 @@ export default function SmtpPage() {
     loadAccounts();
   }, []);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showModal) {
+        setShowModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showModal]);
+
   const loadAccounts = async () => {
     setLoading(true);
     try {
@@ -434,304 +444,324 @@ export default function SmtpPage() {
 
         {/* Modal: Connect SMTP Account */}
         {showModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 overflow-y-auto">
-            <div className="glass-panel w-full max-w-xl p-6 rounded-2xl space-y-5 border border-slate-700 relative my-8 animate-in fade-in zoom-in-95 duration-200">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowModal(false);
+            }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-3 sm:p-6 overflow-hidden"
+          >
+            <div className="glass-panel w-full max-w-xl max-h-[90vh] flex flex-col rounded-2xl border border-slate-700 relative shadow-2xl animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
+              {/* Sticky Modal Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0 bg-slate-900/95">
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
                   <Server className="w-4 h-4 text-blue-400" />
                   <span>Connect SMTP Sending Mailbox</span>
                 </h3>
                 <button
+                  type="button"
                   onClick={() => setShowModal(false)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-white cursor-pointer"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                  title="Close modal (Esc)"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* Presets */}
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                  Provider Preset
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              {/* Scrollable Form Body */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                {/* Presets */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                    Provider Preset
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleApplyPreset('gmail')}
+                      className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                        formData.provider === 'gmail'
+                          ? 'bg-blue-600/20 border-blue-500 text-blue-300'
+                          : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      Google Workspace
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplyPreset('outlook')}
+                      className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                        formData.provider === 'outlook'
+                          ? 'bg-blue-600/20 border-blue-500 text-blue-300'
+                          : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      Microsoft 365
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplyPreset('custom')}
+                      className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                        formData.provider === 'custom'
+                          ? 'bg-blue-600/20 border-blue-500 text-blue-300'
+                          : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      Custom SMTP
+                    </button>
+                  </div>
+                </div>
+
+                <form id="smtp-form" onSubmit={(e) => handleCreateAccount(e, false)} className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-slate-300">Account Label *</label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.name}
+                      onChange={(e) => {
+                        setFormData({ ...formData, name: e.target.value });
+                        setModalTestResult(null);
+                      }}
+                      placeholder="e.g. Sales Inbound Mailer"
+                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div className="col-span-2 space-y-1">
+                      <label className="text-[11px] font-semibold text-slate-300">SMTP Host *</label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.host}
+                        onChange={(e) => {
+                          setFormData({ ...formData, host: e.target.value });
+                          setModalTestResult(null);
+                        }}
+                        placeholder="smtp.gmail.com"
+                        className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-slate-300">Port *</label>
+                      <input
+                        type="number"
+                        required
+                        value={formData.port}
+                        onChange={(e) => {
+                          setFormData({ ...formData, port: Number(e.target.value) });
+                          setModalTestResult(null);
+                        }}
+                        placeholder="587"
+                        className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-slate-300">
+                        SMTP Username / Email *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.username}
+                        onChange={(e) => {
+                          setFormData({ ...formData, username: e.target.value });
+                          setModalTestResult(null);
+                        }}
+                        placeholder="alex@company.com"
+                        className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-slate-300">
+                        App Password / Token *
+                      </label>
+                      <input
+                        type="password"
+                        required
+                        value={formData.password || ''}
+                        onChange={(e) => {
+                          setFormData({ ...formData, password: e.target.value });
+                          setModalTestResult(null);
+                        }}
+                        placeholder="16-character App Password"
+                        className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  {formData.provider === 'gmail' && (
+                    <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-300 text-[11px] flex items-center gap-2">
+                      <Info className="w-4 h-4 shrink-0 text-blue-400" />
+                      <span>
+                        Gmail requires a <strong>16-character App Password</strong> generated from Google Account Security with 2-Step Verification enabled.
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-slate-300">Sender Name</label>
+                      <input
+                        type="text"
+                        value={formData.from_name}
+                        onChange={(e) => setFormData({ ...formData, from_name: e.target.value })}
+                        placeholder="Alex Vance"
+                        className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-slate-300">
+                        From Email Address *
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        value={formData.from_email}
+                        onChange={(e) => setFormData({ ...formData, from_email: e.target.value })}
+                        placeholder="alex@company.com"
+                        className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-slate-300">
+                        Daily Max Send Quota
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.daily_limit}
+                        onChange={(e) =>
+                          setFormData({ ...formData, daily_limit: Number(e.target.value) })
+                        }
+                        className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    <div className="flex flex-col justify-end space-y-2 pb-1">
+                      <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
+                        <input
+                          type="checkbox"
+                          checked={formData.use_tls}
+                          onChange={(e) => setFormData({ ...formData, use_tls: e.target.checked })}
+                          className="rounded text-blue-600 bg-slate-900 border-slate-700"
+                        />
+                        <span>Require STARTTLS</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Pre-Save Handshake Verification Status */}
+                  {modalTestResult && (
+                    <div
+                      className={`p-3.5 rounded-xl text-xs flex items-start justify-between gap-3 border animate-in fade-in duration-200 ${
+                        modalTestResult.success
+                          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                          : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                      }`}
+                    >
+                      <div className="flex items-start gap-2.5">
+                        {modalTestResult.success ? (
+                          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400 mt-0.5" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4 shrink-0 text-rose-400 mt-0.5" />
+                        )}
+                        <div className="space-y-1">
+                          <p className="font-semibold text-slate-200">
+                            {modalTestResult.success ? 'Handshake Verified' : 'Authentication / Connection Failed'}
+                          </p>
+                          <p className="text-[11px] leading-relaxed opacity-90">{modalTestResult.message}</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setModalTestResult(null)}
+                        className="text-slate-400 hover:text-white p-1 rounded-md hover:bg-slate-800/60 shrink-0 cursor-pointer"
+                        title="Dismiss notification"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Verification Toggle */}
+                  <div className="pt-2 border-t border-slate-800">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300 select-none">
+                      <input
+                        type="checkbox"
+                        checked={verifyBeforeSave}
+                        onChange={(e) => setVerifyBeforeSave(e.target.checked)}
+                        className="rounded text-blue-600 bg-slate-900 border-slate-700"
+                      />
+                      <span>Verify connection & credentials before saving mailbox</span>
+                    </label>
+                  </div>
+                </form>
+              </div>
+
+              {/* Sticky Modal Footer */}
+              <div className="flex items-center justify-between gap-3 px-6 py-3.5 border-t border-slate-800 bg-slate-900/95 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleTestModalConnection}
+                  disabled={modalTesting || savingAccount}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 cursor-pointer disabled:opacity-50 transition-colors"
+                >
+                  {modalTesting ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400" />
+                      <span>Verifying...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-3.5 h-3.5 text-blue-400" />
+                      <span>Test Handshake</span>
+                    </>
+                  )}
+                </button>
+
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => handleApplyPreset('gmail')}
-                    className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-                      formData.provider === 'gmail'
-                        ? 'bg-blue-600/20 border-blue-500 text-blue-300'
-                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
-                    }`}
+                    onClick={() => setShowModal(false)}
+                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium cursor-pointer transition-colors"
                   >
-                    Google Workspace
+                    Cancel
                   </button>
+
+                  {modalTestResult && !modalTestResult.success && (
+                    <button
+                      type="button"
+                      onClick={(e) => handleCreateAccount(e, true)}
+                      disabled={savingAccount}
+                      className="px-3.5 py-2 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/30 text-xs font-semibold cursor-pointer transition-colors"
+                      title="Save even though handshake test failed"
+                    >
+                      Save Anyway
+                    </button>
+                  )}
+
                   <button
-                    type="button"
-                    onClick={() => handleApplyPreset('outlook')}
-                    className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-                      formData.provider === 'outlook'
-                        ? 'bg-blue-600/20 border-blue-500 text-blue-300'
-                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
-                    }`}
+                    type="submit"
+                    form="smtp-form"
+                    disabled={savingAccount || modalTesting}
+                    className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-blue-600/30 cursor-pointer flex items-center gap-1.5 transition-all"
                   >
-                    Microsoft 365
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleApplyPreset('custom')}
-                    className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-                      formData.provider === 'custom'
-                        ? 'bg-blue-600/20 border-blue-500 text-blue-300'
-                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    Custom SMTP
+                    {savingAccount ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Verifying & Saving...</span>
+                      </>
+                    ) : (
+                      <span>Save Mailbox</span>
+                    )}
                   </button>
                 </div>
               </div>
-
-              <form onSubmit={(e) => handleCreateAccount(e, false)} className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-[11px] font-semibold text-slate-300">Account Label *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) => {
-                      setFormData({ ...formData, name: e.target.value });
-                      setModalTestResult(null);
-                    }}
-                    placeholder="e.g. Sales Inbound Mailer"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  <div className="col-span-2 space-y-1">
-                    <label className="text-[11px] font-semibold text-slate-300">SMTP Host *</label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.host}
-                      onChange={(e) => {
-                        setFormData({ ...formData, host: e.target.value });
-                        setModalTestResult(null);
-                      }}
-                      placeholder="smtp.gmail.com"
-                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-slate-300">Port *</label>
-                    <input
-                      type="number"
-                      required
-                      value={formData.port}
-                      onChange={(e) => {
-                        setFormData({ ...formData, port: Number(e.target.value) });
-                        setModalTestResult(null);
-                      }}
-                      placeholder="587"
-                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-slate-300">
-                      SMTP Username / Email *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.username}
-                      onChange={(e) => {
-                        setFormData({ ...formData, username: e.target.value });
-                        setModalTestResult(null);
-                      }}
-                      placeholder="alex@company.com"
-                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-slate-300">
-                      App Password / Token *
-                    </label>
-                    <input
-                      type="password"
-                      required
-                      value={formData.password || ''}
-                      onChange={(e) => {
-                        setFormData({ ...formData, password: e.target.value });
-                        setModalTestResult(null);
-                      }}
-                      placeholder="16-character App Password"
-                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                </div>
-
-                {formData.provider === 'gmail' && (
-                  <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-300 text-[11px] flex items-center gap-2">
-                    <Info className="w-4 h-4 shrink-0 text-blue-400" />
-                    <span>
-                      Gmail requires a <strong>16-character App Password</strong> generated from Google Account Security with 2-Step Verification enabled.
-                    </span>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-slate-300">Sender Name</label>
-                    <input
-                      type="text"
-                      value={formData.from_name}
-                      onChange={(e) => setFormData({ ...formData, from_name: e.target.value })}
-                      placeholder="Alex Vance"
-                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-slate-300">
-                      From Email Address *
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={formData.from_email}
-                      onChange={(e) => setFormData({ ...formData, from_email: e.target.value })}
-                      placeholder="alex@company.com"
-                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-slate-300">
-                      Daily Max Send Quota
-                    </label>
-                    <input
-                      type="number"
-                      value={formData.daily_limit}
-                      onChange={(e) =>
-                        setFormData({ ...formData, daily_limit: Number(e.target.value) })
-                      }
-                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                  <div className="flex flex-col justify-end space-y-2 pb-1">
-                    <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
-                      <input
-                        type="checkbox"
-                        checked={formData.use_tls}
-                        onChange={(e) => setFormData({ ...formData, use_tls: e.target.checked })}
-                        className="rounded text-blue-600 bg-slate-900 border-slate-700"
-                      />
-                      <span>Require STARTTLS</span>
-                    </label>
-                  </div>
-                </div>
-
-                {/* Pre-Save Handshake Verification Status */}
-                {modalTestResult && (
-                  <div
-                    className={`p-3.5 rounded-xl text-xs flex items-start gap-2.5 border animate-in fade-in duration-200 ${
-                      modalTestResult.success
-                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
-                        : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
-                    }`}
-                  >
-                    {modalTestResult.success ? (
-                      <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400 mt-0.5" />
-                    ) : (
-                      <AlertCircle className="w-4 h-4 shrink-0 text-rose-400 mt-0.5" />
-                    )}
-                    <div className="space-y-1">
-                      <p className="font-semibold text-slate-200">
-                        {modalTestResult.success ? 'Handshake Verified' : 'Authentication / Connection Failed'}
-                      </p>
-                      <p className="text-[11px] leading-relaxed opacity-90">{modalTestResult.message}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Verification Toggle */}
-                <div className="pt-2 border-t border-slate-800">
-                  <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300 select-none">
-                    <input
-                      type="checkbox"
-                      checked={verifyBeforeSave}
-                      onChange={(e) => setVerifyBeforeSave(e.target.checked)}
-                      className="rounded text-blue-600 bg-slate-900 border-slate-700"
-                    />
-                    <span>Verify connection & credentials before saving mailbox</span>
-                  </label>
-                </div>
-
-                {/* Modal Footer Controls */}
-                <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-800">
-                  {/* Left: Test Connection Button */}
-                  <button
-                    type="button"
-                    onClick={handleTestModalConnection}
-                    disabled={modalTesting || savingAccount}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 cursor-pointer disabled:opacity-50"
-                  >
-                    {modalTesting ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400" />
-                        <span>Verifying...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Zap className="w-3.5 h-3.5 text-blue-400" />
-                        <span>Test Handshake</span>
-                      </>
-                    )}
-                  </button>
-
-                  {/* Right: Cancel & Submit Buttons */}
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowModal(false)}
-                      className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-medium cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-
-                    {modalTestResult && !modalTestResult.success && (
-                      <button
-                        type="button"
-                        onClick={(e) => handleCreateAccount(e, true)}
-                        disabled={savingAccount}
-                        className="px-3 py-2 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/30 text-xs font-semibold cursor-pointer"
-                        title="Save even though handshake test failed"
-                      >
-                        Save Anyway
-                      </button>
-                    )}
-
-                    <button
-                      type="submit"
-                      disabled={savingAccount || modalTesting}
-                      className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-blue-600/30 cursor-pointer flex items-center gap-1.5"
-                    >
-                      {savingAccount ? (
-                        <>
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          <span>Verifying & Saving...</span>
-                        </>
-                      ) : (
-                        <span>Save Mailbox</span>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </form>
             </div>
           </div>
         )}
