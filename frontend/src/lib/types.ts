@@ -69,6 +69,9 @@ export interface LeadCreateInput {
   notes?: string;
   tags?: string[];
   list_id?: number;
+  validation_status?: EmailValidationStatus;
+  deliverability_score?: number;
+  status?: LeadStatus;
 }
 
 export interface ValidationDetail {
@@ -109,6 +112,9 @@ export interface SmtpAccount {
   emails_sent_today: number;
   is_active: boolean;
   created_at: string;
+  connection_status?: 'verified' | 'failed' | 'untested';
+  last_tested_at?: string;
+  last_error?: string;
 }
 
 export interface SmtpAccountInput {
@@ -123,6 +129,9 @@ export interface SmtpAccountInput {
   use_tls: boolean;
   use_ssl: boolean;
   daily_limit: number;
+  connection_status?: 'verified' | 'failed' | 'untested';
+  last_tested_at?: string;
+  last_error?: string;
 }
 
 export interface CampaignStep {
@@ -148,11 +157,11 @@ export interface Campaign {
   reply_count: number;
   bounce_count: number;
   daily_limit: number;
-  track_opens: boolean;
-  track_clicks: boolean;
+  track_opens?: boolean;
+  track_clicks?: boolean;
   created_at: string;
   updated_at?: string;
-  steps: CampaignStep[];
+  steps?: CampaignStep[];
 }
 
 export interface CampaignCreateInput {

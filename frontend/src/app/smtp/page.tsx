@@ -15,6 +15,8 @@ import {
   Loader2,
   X,
   ExternalLink,
+  RefreshCw,
+  Info,
 } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { api } from '@/lib/api';
@@ -26,6 +28,12 @@ export default function SmtpPage() {
   const [showModal, setShowModal] = useState(false);
   const [testingId, setTestingId] = useState<number | null>(null);
   const [testResponse, setTestResponse] = useState<{ id: number; message: string; success: boolean } | null>(null);
+
+  // Modal Test State
+  const [modalTesting, setModalTesting] = useState(false);
+  const [modalTestResult, setModalTestResult] = useState<{ success: boolean; message: string; code?: string } | null>(null);
+  const [verifyBeforeSave, setVerifyBeforeSave] = useState(true);
+  const [savingAccount, setSavingAccount] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState<SmtpAccountInput>({
@@ -59,6 +67,7 @@ export default function SmtpPage() {
   };
 
   const handleApplyPreset = (provider: SmtpProvider) => {
+    setModalTestResult(null);
     if (provider === 'gmail') {
       setFormData({
         ...formData,
@@ -89,14 +98,72 @@ export default function SmtpPage() {
     }
   };
 
+  const handleTestModalConnection = async () => {
+    if (!formData.host || !formData.username) {
+      setModalTestResult({
+        success: false,
+        message: 'Please provide both SMTP Host and Username/Email before testing.',
+      });
+      return;
+    }
+
+    if (!formData.password) {
+      setModalTestResult({
+        success: false,
+        message: 'Please enter your SMTP Password or App Password to test authentication.',
+      });
+      return;
+    }
+
+    setModalTesting(true);
+    setModalTestResult(null);
+
+    try {
+      const res = await api.testSmtpCredentials(formData);
+      setModalTestResult(res);
+    } catch (err: any) {
+      setModalTestResult({
+        success: false,
+        message: err.message || 'Connection test failed unexpectedly.',
+      });
+    } finally {
+      setModalTesting(false);
+    }
+  };
+
   const handleTestConnection = async (id: number) => {
     setTestingId(id);
     setTestResponse(null);
     try {
       const res = await api.testSmtpAccount(id);
       setTestResponse({ id, message: res.message || 'SMTP Handshake verified!', success: res.success });
+      // Update account status in local view
+      setAccounts((prev) =>
+        prev.map((acc) =>
+          acc.id === id
+            ? {
+                ...acc,
+                connection_status: res.success ? 'verified' : 'failed',
+                last_error: res.success ? undefined : res.message,
+                last_tested_at: new Date().toISOString(),
+              }
+            : acc
+        )
+      );
     } catch (err: any) {
       setTestResponse({ id, message: err.message || 'Connection failed', success: false });
+      setAccounts((prev) =>
+        prev.map((acc) =>
+          acc.id === id
+            ? {
+                ...acc,
+                connection_status: 'failed',
+                last_error: err.message || 'Connection failed',
+                last_tested_at: new Date().toISOString(),
+              }
+            : acc
+        )
+      );
     } finally {
       setTestingId(null);
     }
@@ -112,14 +179,39 @@ export default function SmtpPage() {
     }
   };
 
-  const handleCreateAccount = async (e: React.FormEvent) => {
+  const handleCreateAccount = async (e: React.FormEvent, forceSave = false) => {
     e.preventDefault();
+    setSavingAccount(true);
+
     try {
-      await api.createSmtpAccount(formData);
+      // If verification is enabled and we haven't verified or force-saved yet
+      if (verifyBeforeSave && !forceSave && modalTestResult?.success !== true) {
+        setModalTesting(true);
+        const testRes = await api.testSmtpCredentials(formData);
+        setModalTesting(false);
+        setModalTestResult(testRes);
+
+        if (!testRes.success) {
+          // Halt save so user knows credentials failed
+          setSavingAccount(false);
+          return;
+        }
+      }
+
+      const payload = {
+        ...formData,
+        connection_status: modalTestResult?.success ? ('verified' as const) : ('untested' as const),
+      };
+
+      await api.createSmtpAccount(payload);
       setShowModal(false);
+      setModalTestResult(null);
       loadAccounts();
     } catch (err: any) {
-      alert(`Error creating SMTP account: ${err.message || 'Failed'}`);
+      alert(`Error saving SMTP mailbox: ${err.message || 'Failed'}`);
+    } finally {
+      setSavingAccount(false);
+      setModalTesting(false);
     }
   };
 
@@ -127,25 +219,31 @@ export default function SmtpPage() {
     <div className="flex-1 flex flex-col bg-[#06090e]">
       <Navbar
         title="SMTP & Email Infrastructure"
-        subtitle="Manage sender mailboxes with Fernet encryption, TLS verification and daily send throttle"
+        subtitle="Manage sender mailboxes with Fernet AES-256 encryption, TLS handshake verification, and send quotas"
       />
 
       <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl w-full mx-auto">
         {/* Header Ribbon */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <span className="text-sm font-bold text-white">Configured Inboxes</span>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
               {accounts.length} Total
+            </span>
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              {accounts.filter((a) => a.connection_status === 'verified').length} Verified
             </span>
           </div>
 
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => {
+              setModalTestResult(null);
+              setShowModal(true);
+            }}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-blue-600/30 transition-all cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Connect SMTP Account</span>
+            <span>Connect SMTP Mailbox</span>
           </button>
         </div>
 
@@ -156,9 +254,9 @@ export default function SmtpPage() {
               <Lock className="w-4 h-4" />
             </div>
             <div>
-              <p className="font-semibold text-slate-200">Fernet 256-bit Credential Encryption Active</p>
+              <p className="font-semibold text-slate-200">Zero-Trust Credential Security & Handshake Validation</p>
               <p className="text-slate-400 text-[11px] mt-0.5">
-                Passwords and SMTP credentials are encrypted before persisting to the database.
+                SMTP passwords are encrypted with AES-256-GCM. Live sockets verify TLS negotiation and SMTP authentication before campaign dispatch.
               </p>
             </div>
           </div>
@@ -205,15 +303,34 @@ export default function SmtpPage() {
                   <div className="space-y-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 font-bold">
+                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 font-bold shrink-0">
                           <Server className="w-5 h-5" />
                         </div>
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <h4 className="text-base font-bold text-white">{acc.name}</h4>
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase bg-slate-800 text-slate-300 border border-slate-700">
                               {acc.provider}
                             </span>
+
+                            {/* Status Badge */}
+                            {acc.connection_status === 'verified' && (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                                <CheckCircle2 className="w-2.5 h-2.5" />
+                                Verified
+                              </span>
+                            )}
+                            {acc.connection_status === 'failed' && (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center gap-1">
+                                <AlertCircle className="w-2.5 h-2.5" />
+                                Auth Failed
+                              </span>
+                            )}
+                            {(!acc.connection_status || acc.connection_status === 'untested') && (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                Untested
+                              </span>
+                            )}
                           </div>
                           <p className="text-xs text-slate-400 font-mono mt-0.5">{acc.from_email}</p>
                         </div>
@@ -221,7 +338,7 @@ export default function SmtpPage() {
 
                       <button
                         onClick={() => handleDeleteAccount(acc.id)}
-                        className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-slate-800 transition-colors"
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-slate-800 transition-colors cursor-pointer"
                         title="Delete Account"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -243,6 +360,17 @@ export default function SmtpPage() {
                         </span>
                       </div>
                     </div>
+
+                    {/* Show error explanation if connection failed */}
+                    {acc.connection_status === 'failed' && acc.last_error && (
+                      <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 shrink-0 text-rose-400 mt-0.5" />
+                        <div>
+                          <p className="font-semibold text-rose-200">Connection Handshake Rejected</p>
+                          <p className="text-[11px] text-rose-300/90 mt-0.5 leading-relaxed">{acc.last_error}</p>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Daily Quota Progress */}
                     <div className="space-y-1.5">
@@ -270,8 +398,8 @@ export default function SmtpPage() {
                     >
                       {testingId === acc.id ? (
                         <>
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          <span>Testing SMTP Handshake...</span>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400" />
+                          <span>Testing SMTP Socket & Auth...</span>
                         </>
                       ) : (
                         <>
@@ -283,18 +411,18 @@ export default function SmtpPage() {
 
                     {testResponse && testResponse.id === acc.id && (
                       <div
-                        className={`p-3 rounded-xl text-xs flex items-center gap-2 border ${
+                        className={`p-3 rounded-xl text-xs flex items-start gap-2 border animate-in fade-in duration-200 ${
                           testResponse.success
                             ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
                             : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
                         }`}
                       >
                         {testResponse.success ? (
-                          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+                          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400 mt-0.5" />
                         ) : (
-                          <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                          <AlertCircle className="w-4 h-4 shrink-0 text-rose-400 mt-0.5" />
                         )}
-                        <span>{testResponse.message}</span>
+                        <span className="leading-relaxed">{testResponse.message}</span>
                       </div>
                     )}
                   </div>
@@ -315,7 +443,7 @@ export default function SmtpPage() {
                 </h3>
                 <button
                   onClick={() => setShowModal(false)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-white"
+                  className="p-1 rounded-lg text-slate-400 hover:text-white cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -363,14 +491,17 @@ export default function SmtpPage() {
                 </div>
               </div>
 
-              <form onSubmit={handleCreateAccount} className="space-y-4">
+              <form onSubmit={(e) => handleCreateAccount(e, false)} className="space-y-4">
                 <div className="space-y-1">
                   <label className="text-[11px] font-semibold text-slate-300">Account Label *</label>
                   <input
                     type="text"
                     required
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, name: e.target.value });
+                      setModalTestResult(null);
+                    }}
                     placeholder="e.g. Sales Inbound Mailer"
                     className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-blue-500"
                   />
@@ -383,7 +514,10 @@ export default function SmtpPage() {
                       type="text"
                       required
                       value={formData.host}
-                      onChange={(e) => setFormData({ ...formData, host: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, host: e.target.value });
+                        setModalTestResult(null);
+                      }}
                       placeholder="smtp.gmail.com"
                       className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-blue-500"
                     />
@@ -394,7 +528,10 @@ export default function SmtpPage() {
                       type="number"
                       required
                       value={formData.port}
-                      onChange={(e) => setFormData({ ...formData, port: Number(e.target.value) })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, port: Number(e.target.value) });
+                        setModalTestResult(null);
+                      }}
                       placeholder="587"
                       className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-blue-500"
                     />
@@ -410,7 +547,10 @@ export default function SmtpPage() {
                       type="text"
                       required
                       value={formData.username}
-                      onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, username: e.target.value });
+                        setModalTestResult(null);
+                      }}
                       placeholder="alex@company.com"
                       className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-blue-500"
                     />
@@ -423,12 +563,24 @@ export default function SmtpPage() {
                       type="password"
                       required
                       value={formData.password || ''}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      placeholder="••••••••••••"
+                      onChange={(e) => {
+                        setFormData({ ...formData, password: e.target.value });
+                        setModalTestResult(null);
+                      }}
+                      placeholder="16-character App Password"
                       className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-blue-500"
                     />
                   </div>
                 </div>
+
+                {formData.provider === 'gmail' && (
+                  <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-300 text-[11px] flex items-center gap-2">
+                    <Info className="w-4 h-4 shrink-0 text-blue-400" />
+                    <span>
+                      Gmail requires a <strong>16-character App Password</strong> generated from Google Account Security with 2-Step Verification enabled.
+                    </span>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
@@ -483,20 +635,101 @@ export default function SmtpPage() {
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+                {/* Pre-Save Handshake Verification Status */}
+                {modalTestResult && (
+                  <div
+                    className={`p-3.5 rounded-xl text-xs flex items-start gap-2.5 border animate-in fade-in duration-200 ${
+                      modalTestResult.success
+                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                        : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                    }`}
+                  >
+                    {modalTestResult.success ? (
+                      <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400 mt-0.5" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 shrink-0 text-rose-400 mt-0.5" />
+                    )}
+                    <div className="space-y-1">
+                      <p className="font-semibold text-slate-200">
+                        {modalTestResult.success ? 'Handshake Verified' : 'Authentication / Connection Failed'}
+                      </p>
+                      <p className="text-[11px] leading-relaxed opacity-90">{modalTestResult.message}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Verification Toggle */}
+                <div className="pt-2 border-t border-slate-800">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300 select-none">
+                    <input
+                      type="checkbox"
+                      checked={verifyBeforeSave}
+                      onChange={(e) => setVerifyBeforeSave(e.target.checked)}
+                      className="rounded text-blue-600 bg-slate-900 border-slate-700"
+                    />
+                    <span>Verify connection & credentials before saving mailbox</span>
+                  </label>
+                </div>
+
+                {/* Modal Footer Controls */}
+                <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-800">
+                  {/* Left: Test Connection Button */}
                   <button
                     type="button"
-                    onClick={() => setShowModal(false)}
-                    className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-medium cursor-pointer"
+                    onClick={handleTestModalConnection}
+                    disabled={modalTesting || savingAccount}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 cursor-pointer disabled:opacity-50"
                   >
-                    Cancel
+                    {modalTesting ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400" />
+                        <span>Verifying...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="w-3.5 h-3.5 text-blue-400" />
+                        <span>Test Handshake</span>
+                      </>
+                    )}
                   </button>
-                  <button
-                    type="submit"
-                    className="px-6 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md shadow-blue-600/30 cursor-pointer"
-                  >
-                    Save & Connect Mailbox
-                  </button>
+
+                  {/* Right: Cancel & Submit Buttons */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowModal(false)}
+                      className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-medium cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+
+                    {modalTestResult && !modalTestResult.success && (
+                      <button
+                        type="button"
+                        onClick={(e) => handleCreateAccount(e, true)}
+                        disabled={savingAccount}
+                        className="px-3 py-2 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/30 text-xs font-semibold cursor-pointer"
+                        title="Save even though handshake test failed"
+                      >
+                        Save Anyway
+                      </button>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={savingAccount || modalTesting}
+                      className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-blue-600/30 cursor-pointer flex items-center gap-1.5"
+                    >
+                      {savingAccount ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Verifying & Saving...</span>
+                        </>
+                      ) : (
+                        <span>Save Mailbox</span>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </form>
             </div>

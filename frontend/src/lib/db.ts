@@ -70,6 +70,7 @@ class MemoryStore {
   leads: Lead[] = [];
   campaigns: Campaign[] = [];
   smtpAccounts: SmtpAccount[] = [];
+  smtpPasswords: Map<number, string> = new Map();
   suppressionRules: SuppressionRule[] = [];
   jobs: ExtractionJob[] = [];
   activityLogs: ActivityLogItem[] = [];
@@ -148,9 +149,20 @@ export async function initDb(): Promise<{ success: boolean; message: string }> {
         daily_limit INTEGER DEFAULT 500,
         emails_sent_today INTEGER DEFAULT 0,
         is_active BOOLEAN DEFAULT TRUE,
+        connection_status VARCHAR(50) DEFAULT 'untested',
+        last_error TEXT,
+        last_tested_at TIMESTAMP WITH TIME ZONE,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
     `;
+
+    try {
+      await sql`ALTER TABLE smtp_accounts ADD COLUMN IF NOT EXISTS connection_status VARCHAR(50) DEFAULT 'untested';`;
+      await sql`ALTER TABLE smtp_accounts ADD COLUMN IF NOT EXISTS last_error TEXT;`;
+      await sql`ALTER TABLE smtp_accounts ADD COLUMN IF NOT EXISTS last_tested_at TIMESTAMP WITH TIME ZONE;`;
+    } catch {
+      // Columns may already exist
+    }
 
     await sql`
       CREATE TABLE IF NOT EXISTS campaigns (
@@ -742,7 +754,11 @@ export async function getSmtpAccounts(): Promise<SmtpAccount[]> {
     try {
       const sql = getSql();
       const rows = await sql`
-        SELECT id, name, provider, host, port, username, from_name, from_email, use_tls, use_ssl, daily_limit, emails_sent_today, is_active, created_at
+        SELECT id, name, provider, host, port, username, from_name, from_email, use_tls, use_ssl, daily_limit, emails_sent_today, is_active,
+               COALESCE(connection_status, 'untested') as connection_status,
+               last_error,
+               last_tested_at,
+               created_at
         FROM smtp_accounts
         ORDER BY created_at DESC;
       `;
@@ -760,6 +776,9 @@ export async function getSmtpAccounts(): Promise<SmtpAccount[]> {
         daily_limit: r.daily_limit,
         emails_sent_today: r.emails_sent_today,
         is_active: r.is_active,
+        connection_status: r.connection_status || 'untested',
+        last_error: r.last_error || undefined,
+        last_tested_at: r.last_tested_at ? new Date(r.last_tested_at).toISOString() : undefined,
         created_at: new Date(r.created_at).toISOString(),
       }));
     } catch (err) {
@@ -772,12 +791,13 @@ export async function getSmtpAccounts(): Promise<SmtpAccount[]> {
 
 export async function createSmtpAccount(data: SmtpAccountInput & { encrypted_password?: string }): Promise<SmtpAccount> {
   const encPass = data.encrypted_password || (data.password ? encryptCredential(data.password) : '');
+  const connStatus = data.connection_status || 'untested';
 
   if (isDbConfigured()) {
     const sql = getSql();
     const [row] = await sql`
       INSERT INTO smtp_accounts (
-        name, provider, host, port, username, encrypted_password, from_name, from_email, use_tls, use_ssl, daily_limit, is_active
+        name, provider, host, port, username, encrypted_password, from_name, from_email, use_tls, use_ssl, daily_limit, is_active, connection_status, last_error, last_tested_at
       ) VALUES (
         ${data.name},
         ${data.provider || 'custom'},
@@ -790,12 +810,15 @@ export async function createSmtpAccount(data: SmtpAccountInput & { encrypted_pas
         ${data.use_tls !== undefined ? data.use_tls : true},
         ${data.use_ssl !== undefined ? data.use_ssl : false},
         ${data.daily_limit || 500},
-        true
+        true,
+        ${connStatus},
+        ${data.last_error || null},
+        ${data.last_tested_at ? new Date(data.last_tested_at) : (connStatus === 'verified' ? new Date() : null)}
       )
-      RETURNING id, name, provider, host, port, username, from_name, from_email, use_tls, use_ssl, daily_limit, emails_sent_today, is_active, created_at;
+      RETURNING id, name, provider, host, port, username, from_name, from_email, use_tls, use_ssl, daily_limit, emails_sent_today, is_active, connection_status, last_error, last_tested_at, created_at;
     `;
 
-    await logActivity('SMTP_CONFIGURED', 'smtp', `Configured mailbox "${data.name}" (${data.from_email})`);
+    await logActivity('SMTP_CONFIGURED', 'smtp', `Configured mailbox "${data.name}" (${data.from_email}) - Status: ${connStatus}`);
 
     return {
       id: row.id,
@@ -811,6 +834,9 @@ export async function createSmtpAccount(data: SmtpAccountInput & { encrypted_pas
       daily_limit: row.daily_limit,
       emails_sent_today: row.emails_sent_today,
       is_active: row.is_active,
+      connection_status: row.connection_status || 'untested',
+      last_error: row.last_error || undefined,
+      last_tested_at: row.last_tested_at ? new Date(row.last_tested_at).toISOString() : undefined,
       created_at: new Date(row.created_at).toISOString(),
     };
   }
@@ -829,11 +855,45 @@ export async function createSmtpAccount(data: SmtpAccountInput & { encrypted_pas
     daily_limit: data.daily_limit || 500,
     emails_sent_today: 0,
     is_active: true,
+    connection_status: connStatus,
+    last_error: data.last_error,
+    last_tested_at: data.last_tested_at,
     created_at: new Date().toISOString(),
   };
   memoryStore.smtpAccounts.push(newAcc);
-  await logActivity('SMTP_CONFIGURED', 'smtp', `Configured mailbox "${data.name}" (${data.from_email})`);
+  if (data.password) {
+    memoryStore.smtpPasswords.set(newAcc.id, data.password);
+  }
+  await logActivity('SMTP_CONFIGURED', 'smtp', `Configured mailbox "${data.name}" (${data.from_email}) - Status: ${connStatus}`);
   return newAcc;
+}
+
+export async function updateSmtpAccountStatus(
+  id: number,
+  status: 'verified' | 'failed',
+  errorMsg?: string
+): Promise<void> {
+  if (isDbConfigured()) {
+    try {
+      const sql = getSql();
+      await sql`
+        UPDATE smtp_accounts
+        SET connection_status = ${status},
+            last_error = ${errorMsg || null},
+            last_tested_at = NOW()
+        WHERE id = ${id};
+      `;
+    } catch (err) {
+      console.error('Failed to update SMTP account status in DB:', err);
+    }
+  }
+
+  const acc = memoryStore.smtpAccounts.find((s) => s.id === id);
+  if (acc) {
+    acc.connection_status = status;
+    acc.last_error = errorMsg;
+    acc.last_tested_at = new Date().toISOString();
+  }
 }
 
 export async function getSmtpAccountRaw(id: number): Promise<{ account: SmtpAccount; decrypted_pass: string } | null> {
@@ -855,6 +915,9 @@ export async function getSmtpAccountRaw(id: number): Promise<{ account: SmtpAcco
       daily_limit: row.daily_limit,
       emails_sent_today: row.emails_sent_today,
       is_active: row.is_active,
+      connection_status: row.connection_status || 'untested',
+      last_error: row.last_error || undefined,
+      last_tested_at: row.last_tested_at ? new Date(row.last_tested_at).toISOString() : undefined,
       created_at: new Date(row.created_at).toISOString(),
     };
     const decrypted_pass = row.encrypted_password ? decryptCredential(row.encrypted_password) : '';
@@ -863,7 +926,8 @@ export async function getSmtpAccountRaw(id: number): Promise<{ account: SmtpAcco
 
   const acc = memoryStore.smtpAccounts.find((s) => s.id === id);
   if (!acc) return null;
-  return { account: acc, decrypted_pass: '' };
+  const pass = memoryStore.smtpPasswords.get(id) || '';
+  return { account: acc, decrypted_pass: pass };
 }
 
 export async function deleteSmtpAccount(id: number): Promise<boolean> {

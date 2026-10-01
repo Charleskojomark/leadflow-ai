@@ -276,6 +276,13 @@ class ApiClient {
     });
   }
 
+  async testSmtpCredentials(data: Partial<SmtpAccountInput>): Promise<{ success: boolean; message: string; code?: string }> {
+    return this.request<{ success: boolean; message: string; code?: string }>('/smtp/test', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   async deleteSmtpAccount(id: number): Promise<{ success: boolean }> {
     return this.request<{ success: boolean }>(`/smtp/${id}`, {
       method: 'DELETE',
