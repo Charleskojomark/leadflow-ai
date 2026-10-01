@@ -35,6 +35,7 @@ export default function DiscoveryPage() {
   const [extractedLeads, setExtractedLeads] = useState<Lead[]>([]);
   const [isExtracting, setIsExtracting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isError, setIsError] = useState(false);
 
   useEffect(() => {
     loadListsAndJobs();
@@ -62,6 +63,7 @@ export default function DiscoveryPage() {
 
     setIsExtracting(true);
     setStatusMessage('Connecting to web target, extracting metadata, emails & technologies...');
+    setIsError(false);
     try {
       const res = await api.extractFromUrl({
         url: targetUrl,
@@ -70,6 +72,7 @@ export default function DiscoveryPage() {
       });
 
       setStatusMessage(`Extraction completed successfully! Found ${res.leads_found} contacts.`);
+      setIsError(false);
       if (res.results && res.results.length > 0) {
         setExtractedLeads(res.results);
       } else {
@@ -80,6 +83,7 @@ export default function DiscoveryPage() {
       loadListsAndJobs();
     } catch (err: any) {
       setStatusMessage(`Extraction error: ${err.message || 'Failed to extract'}`);
+      setIsError(true);
     } finally {
       setIsExtracting(false);
     }
@@ -91,6 +95,7 @@ export default function DiscoveryPage() {
 
     setIsExtracting(true);
     setStatusMessage(`Running discovery simulator for query: "${searchQuery}"...`);
+    setIsError(false);
     try {
       const res = await api.extractFromSearch({
         query: searchQuery,
@@ -99,16 +104,24 @@ export default function DiscoveryPage() {
         auto_validate: autoValidate,
       });
 
-      setStatusMessage(`Discovery completed! Found ${res.leads_found} high-intent prospects.`);
-      if (res.results && res.results.length > 0) {
-        setExtractedLeads(res.results);
+      if (res.message) {
+        // Informational fallback (e.g. boolean query, no domain found)
+        setStatusMessage(res.message);
+        setIsError(false);
       } else {
-        const leadsRes = await api.getLeads({ list_id: selectedListId, limit: 10 });
-        setExtractedLeads(leadsRes.items);
+        setStatusMessage(`Discovery completed! Found ${res.leads_found} high-intent prospects.`);
+        setIsError(false);
+        if (res.results && res.results.length > 0) {
+          setExtractedLeads(res.results);
+        } else {
+          const leadsRes = await api.getLeads({ list_id: selectedListId, limit: 10 });
+          setExtractedLeads(leadsRes.items);
+        }
+        loadListsAndJobs();
       }
-      loadListsAndJobs();
     } catch (err: any) {
       setStatusMessage(`Discovery error: ${err.message || 'Search extraction failed'}`);
+      setIsError(true);
     } finally {
       setIsExtracting(false);
     }
@@ -324,8 +337,12 @@ export default function DiscoveryPage() {
           )}
 
           {statusMessage && (
-            <div className="mt-4 p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-300 flex items-center gap-2">
-              <Sparkles className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+            <div className={`mt-4 p-3 rounded-xl border text-xs flex items-start gap-2 ${
+              isError
+                ? 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                : 'bg-blue-500/10 border-blue-500/20 text-blue-300'
+            }`}>
+              <Sparkles className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${isError ? 'text-rose-400' : 'text-blue-400'}`} />
               <span>{statusMessage}</span>
             </div>
           )}
