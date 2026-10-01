@@ -795,28 +795,64 @@ export async function createSmtpAccount(data: SmtpAccountInput & { encrypted_pas
 
   if (isDbConfigured()) {
     const sql = getSql();
-    const [row] = await sql`
-      INSERT INTO smtp_accounts (
-        name, provider, host, port, username, encrypted_password, from_name, from_email, use_tls, use_ssl, daily_limit, is_active, connection_status, last_error, last_tested_at
-      ) VALUES (
-        ${data.name},
-        ${data.provider || 'custom'},
-        ${data.host},
-        ${data.port || 587},
-        ${data.username},
-        ${encPass},
-        ${data.from_name},
-        ${data.from_email},
-        ${data.use_tls !== undefined ? data.use_tls : true},
-        ${data.use_ssl !== undefined ? data.use_ssl : false},
-        ${data.daily_limit || 500},
-        true,
-        ${connStatus},
-        ${data.last_error || null},
-        ${data.last_tested_at ? new Date(data.last_tested_at) : (connStatus === 'verified' ? new Date() : null)}
-      )
-      RETURNING id, name, provider, host, port, username, from_name, from_email, use_tls, use_ssl, daily_limit, emails_sent_today, is_active, connection_status, last_error, last_tested_at, created_at;
-    `;
+    let row: any;
+
+    try {
+      const rows = await sql`
+        INSERT INTO smtp_accounts (
+          name, provider, host, port, username, encrypted_password, from_name, from_email, use_tls, use_ssl, daily_limit, is_active, connection_status, last_error, last_tested_at
+        ) VALUES (
+          ${data.name},
+          ${data.provider || 'custom'},
+          ${data.host},
+          ${data.port || 587},
+          ${data.username},
+          ${encPass},
+          ${data.from_name},
+          ${data.from_email},
+          ${data.use_tls !== undefined ? data.use_tls : true},
+          ${data.use_ssl !== undefined ? data.use_ssl : false},
+          ${data.daily_limit || 500},
+          true,
+          ${connStatus},
+          ${data.last_error || null},
+          ${data.last_tested_at ? new Date(data.last_tested_at) : (connStatus === 'verified' ? new Date() : null)}
+        )
+        RETURNING id, name, provider, host, port, username, from_name, from_email, use_tls, use_ssl, daily_limit, emails_sent_today, is_active, connection_status, last_error, last_tested_at, created_at;
+      `;
+      row = rows[0];
+    } catch (err: any) {
+      if (err.message && err.message.includes('column "connection_status"')) {
+        await sql`ALTER TABLE smtp_accounts ADD COLUMN IF NOT EXISTS connection_status VARCHAR(50) DEFAULT 'untested';`;
+        await sql`ALTER TABLE smtp_accounts ADD COLUMN IF NOT EXISTS last_error TEXT;`;
+        await sql`ALTER TABLE smtp_accounts ADD COLUMN IF NOT EXISTS last_tested_at TIMESTAMP WITH TIME ZONE;`;
+        const retryRows = await sql`
+          INSERT INTO smtp_accounts (
+            name, provider, host, port, username, encrypted_password, from_name, from_email, use_tls, use_ssl, daily_limit, is_active, connection_status, last_error, last_tested_at
+          ) VALUES (
+            ${data.name},
+            ${data.provider || 'custom'},
+            ${data.host},
+            ${data.port || 587},
+            ${data.username},
+            ${encPass},
+            ${data.from_name},
+            ${data.from_email},
+            ${data.use_tls !== undefined ? data.use_tls : true},
+            ${data.use_ssl !== undefined ? data.use_ssl : false},
+            ${data.daily_limit || 500},
+            true,
+            ${connStatus},
+            ${data.last_error || null},
+            ${data.last_tested_at ? new Date(data.last_tested_at) : (connStatus === 'verified' ? new Date() : null)}
+          )
+          RETURNING id, name, provider, host, port, username, from_name, from_email, use_tls, use_ssl, daily_limit, emails_sent_today, is_active, connection_status, last_error, last_tested_at, created_at;
+        `;
+        row = retryRows[0];
+      } else {
+        throw err;
+      }
+    }
 
     await logActivity('SMTP_CONFIGURED', 'smtp', `Configured mailbox "${data.name}" (${data.from_email}) - Status: ${connStatus}`);
 
